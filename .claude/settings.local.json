@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter --version)",
+      "Bash(flutter create:*)",
+      "Bash(flutter pub:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter build:*)",
+      "Bash(xcrun simctl:*)",
+      "Bash(open -a Simulator)",
+      "Bash(flutter run:*)",
+      "Bash(flutter doctor:*)",
+      "Bash(curl -s http://localhost:3000/api/v1/restaurants)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(curl:*)",
+      "Bash(idb --help)",
+      "Bash(idb ui:*)",
+      "Bash(1 sleep:*)",
+      "Bash(python3 -c \":*)",
+      "Bash(echo \"Flutter run started in background with PID $!\")",
+      "Bash(disown)",
+      "Bash(xcrun devicectl:*)",
+      "Bash(idb tap:*)",
+      "Bash(cat /Users/umariqbal/Desktop/bringit_user_app/lib/core/network/*.dart)",
+      "Bash(python3 -c ':*)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); items=data.get\\('data',{}\\).get\\('items',[]\\); [print\\(f'ID:{s[\\\\\"id\\\\\"]} Name:{s[\\\\\"name\\\\\"]}'\\) for s in items[:5]]\")",
+      "Bash(flutter --no-version-check --suppress-analytics run -d \"183D3A84-844F-473A-BAD8-067FC1881ED4\")",
+      "Bash(flutter --no-version-check attach --device-id \"183D3A84-844F-473A-BAD8-067FC1881ED4\" --debug-uri \"http://127.0.0.1:59328/eynIFvc8WXI=/\")",
+      "Bash(flutter --no-version-check logs --device-id \"183D3A84-844F-473A-BAD8-067FC1881ED4\")",
+      "Bash(flutter --no-version-check run -d \"183D3A84-844F-473A-BAD8-067FC1881ED4\")",
+      "Bash(flutter --no-version-check logs -d \"183D3A84-844F-473A-BAD8-067FC1881ED4\")",
+      "Bash(kill %1)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('Keys:', list\\(d.keys\\(\\)\\)\\); print\\('data type:', type\\(d['data']\\).__name__\\); print\\('data length:', len\\(d['data']\\) if isinstance\\(d['data'], list\\) else 'N/A'\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('meta:', json.dumps\\(d.get\\('meta'\\), indent=2\\)\\)\")",
+      "Bash(python3:*)"
+    ]
+  }
+}
