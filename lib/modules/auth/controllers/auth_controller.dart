@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/storage/storage_service.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../routes/app_routes.dart';
@@ -39,6 +40,7 @@ class AuthController extends GetxController {
       final token = responseData['token'] ?? responseData['accessToken'];
       if (token != null) {
         _storage.saveToken(token);
+        unawaited(NotificationService().registerTokenAfterLogin());
         final userData = responseData['user'] as Map<String, dynamic>?;
         if (userData != null) {
           _storage.saveUser(Map<String, dynamic>.from(userData));
