@@ -1,22 +1,44 @@
+import 'dart:async';
 import 'package:get/get.dart';
+import '../../../data/models/order_model.dart';
 import '../../../data/models/store_model.dart';
+import '../../../data/repositories/order_repository.dart';
 import '../../../data/repositories/store_repository.dart';
 import '../../../data/repositories/address_repository.dart';
 
 class HomeController extends GetxController {
   final StoreRepository _repo;
   final AddressRepository _addressRepo;
-  HomeController(this._repo, this._addressRepo);
+  final OrderRepository _orderRepo;
+
+  HomeController(this._repo, this._addressRepo, this._orderRepo);
 
   final isLoading = false.obs;
   final restaurants = <StoreModel>[].obs;
   final stores = <StoreModel>[].obs;
   final deliveryAddress = ''.obs;
+  final activeOrders = <OrderModel>[].obs;
+
+  Timer? _orderPollTimer;
+
+  static const _activeStatuses = [
+    'pending',
+    'placed',
+    'accepted',
+    'preparing',
+    'ready',
+    'picked_up',
+    'delivering',
+  ];
 
   @override
   void onInit() {
     super.onInit();
     fetchData();
+    fetchActiveOrders();
+    // Poll active orders every 30 seconds
+    _orderPollTimer =
+        Timer.periodic(const Duration(seconds: 30), (_) => fetchActiveOrders());
   }
 
   Future<void> fetchData() async {
@@ -35,6 +57,17 @@ class HomeController extends GetxController {
     _fetchDeliveryAddress();
   }
 
+  Future<void> fetchActiveOrders() async {
+    try {
+      final all = await _orderRepo.getOrders();
+      activeOrders.value = all
+          .where((o) => _activeStatuses.contains(o.status))
+          .toList();
+    } catch (_) {
+      // Silent fail — tile just won't show if API is down
+    }
+  }
+
   Future<void> _fetchDeliveryAddress() async {
     try {
       final addresses = await _addressRepo.getAddresses();
@@ -45,9 +78,13 @@ class HomeController extends GetxController {
         );
         deliveryAddress.value = defaultAddr.address;
       }
-    } catch (_) {
-      // Silent fail — view shows "Set your location"
-    }
+    } catch (_) {}
+  }
+
+  @override
+  void onClose() {
+    _orderPollTimer?.cancel();
+    super.onClose();
   }
 
   List<StoreModel> _mockRestaurants() => [

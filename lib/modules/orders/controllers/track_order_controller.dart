@@ -21,13 +21,16 @@ class TrackOrderController extends GetxController {
   final isRiderNearby = false.obs;
   final isLoadingMap = true.obs;
 
+  // Reactive status — updated on every poll
+  final currentStatus = ''.obs;
+
   // Custom marker icons (loaded once)
   final userIcon = Rxn<BitmapDescriptor>();
   final storeIcon = Rxn<BitmapDescriptor>();
   final riderIcon = Rxn<BitmapDescriptor>();
 
   // Route polylines
-  final polylines = <Polyline>{}.obs;
+  final polylines = Rx<Set<Polyline>>(<Polyline>{});
 
   final _mapCompleter = Completer<GoogleMapController>();
   Timer? _pollTimer;
@@ -39,6 +42,7 @@ class TrackOrderController extends GetxController {
     super.onInit();
     final args = Get.arguments;
     order = args is OrderModel ? args : (args as Map)['order'] as OrderModel;
+    currentStatus.value = order.status;
     _init();
   }
 
@@ -152,6 +156,7 @@ class TrackOrderController extends GetxController {
   Future<void> _fetchTracking() async {
     try {
       final data = await _repo.getOrderTracking(order.id);
+
       final rider = data['rider'];
       final store = data['store'];
       if (rider != null) {
@@ -169,6 +174,20 @@ class TrackOrderController extends GetxController {
       if (data['estimatedMinutes'] != null) {
         estimatedMinutes.value = (data['estimatedMinutes'] as num).toInt();
       }
+
+      // Update order status from tracking response if provided
+      if (data['status'] is String) {
+        currentStatus.value = (data['status'] as String).toLowerCase();
+      }
+
+      // Fire-and-forget: also fetch full order to get latest status
+      _repo.getOrder(order.id).then((updated) {
+        currentStatus.value = updated.status;
+        if (updated.status == 'delivered' || updated.status == 'cancelled') {
+          _pollTimer?.cancel();
+        }
+      }).catchError((_) {});
+
       _checkRiderNearby();
       _updatePolylines();
       _fitMap();
@@ -195,12 +214,11 @@ class TrackOrderController extends GetxController {
     final r = riderLocation.value;
     final u = userLocation.value;
 
-    const completedColor = Color(0xFFADB5BD); // gray — already traveled
-    const remainingColor = Color(0xFFF97316); // orange — remaining to user
+    const completedColor = Color(0xFFADB5BD);
+    const remainingColor = Color(0xFFF97316);
 
     final updated = <Polyline>{};
 
-    // Store → Rider: gray dashed (completed portion)
     if (s != null && r != null) {
       updated.add(Polyline(
         polylineId: const PolylineId('store_to_rider'),
@@ -211,7 +229,6 @@ class TrackOrderController extends GetxController {
       ));
     }
 
-    // Rider → User: orange dashed (remaining delivery path)
     if (r != null && u != null) {
       updated.add(Polyline(
         polylineId: const PolylineId('rider_to_user'),
@@ -221,7 +238,6 @@ class TrackOrderController extends GetxController {
         patterns: [PatternItem.dash(18), PatternItem.gap(10)],
       ));
     } else if (s != null && u != null) {
-      // No rider yet — draw full store→user path
       updated.add(Polyline(
         polylineId: const PolylineId('store_to_user'),
         points: [s, u],
@@ -236,7 +252,7 @@ class TrackOrderController extends GetxController {
 
   void _startPolling() {
     _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (['delivered', 'cancelled'].contains(order.status)) {
+      if (['delivered', 'cancelled'].contains(currentStatus.value)) {
         _pollTimer?.cancel();
         return;
       }
@@ -254,7 +270,7 @@ class TrackOrderController extends GetxController {
     );
     isRiderNearby.value = distMeters <= _nearbyThresholdMeters;
     if (distMeters > 0 && estimatedMinutes.value == null) {
-      const speedMps = 30000.0 / 3600.0; // 30 km/h in m/s
+      const speedMps = 30000.0 / 3600.0;
       estimatedMinutes.value = max(1, (distMeters / speedMps / 60).ceil());
     }
   }
@@ -284,6 +300,31 @@ class TrackOrderController extends GetxController {
       _mapCompleter.complete(ctrl);
     }
     Future.delayed(const Duration(milliseconds: 500), _fitMap);
+  }
+
+  String statusLabel(String status) {
+    switch (status) {
+      case 'pending':
+        return 'Pending';
+      case 'placed':
+        return 'Placed';
+      case 'accepted':
+        return 'Accepted';
+      case 'preparing':
+        return 'Preparing';
+      case 'ready':
+        return 'Ready';
+      case 'picked_up':
+        return 'Picked Up';
+      case 'delivering':
+        return 'On the Way';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status;
+    }
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../routes/app_routes.dart';
 import '../controllers/track_order_controller.dart';
 
 class TrackOrderView extends GetView<TrackOrderController> {
@@ -19,6 +20,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
         final store = controller.storeLocation.value;
         final rider = controller.riderLocation.value;
         final center = rider ?? store ?? user ?? const LatLng(31.5204, 74.3587);
+        final status = controller.currentStatus.value;
 
         final markers = <Marker>{
           if (user != null)
@@ -55,7 +57,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
 
         return Stack(
           children: [
-            // Full screen map (extends behind bottom panel for depth)
+            // Full screen map
             Positioned.fill(
               bottom: bottomPanelHeight - 30,
               child: controller.isLoadingMap.value
@@ -83,12 +85,18 @@ class TrackOrderView extends GetView<TrackOrderController> {
                     ),
             ),
 
-            // Back button
+            // Back button — goes back if possible, otherwise goes to home
             Positioned(
               top: topPadding + 12,
               left: 16,
               child: _MapButton(
-                onTap: Get.back,
+                onTap: () {
+                  if (Navigator.canPop(context)) {
+                    Get.back();
+                  } else {
+                    Get.offAllNamed(AppRoutes.home);
+                  }
+                },
                 child: const Icon(
                   Icons.arrow_back_ios_new,
                   size: 18,
@@ -179,7 +187,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: _buildBottomPanel(bottomPadding),
+              child: _buildBottomPanel(status, bottomPadding),
             ),
           ],
         );
@@ -231,7 +239,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
     );
   }
 
-  Widget _buildBottomPanel(double bottomPadding) {
+  Widget _buildBottomPanel(String status, double bottomPadding) {
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -283,7 +291,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
-                    _buildStatusBadge(controller.order.status),
+                    _buildStatusBadge(status),
                   ],
                 ),
               ),
@@ -317,7 +325,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
           const SizedBox(height: 20),
 
           // Status stepper
-          _buildStatusStepper(controller.order.status),
+          _buildStatusStepper(status),
 
           const SizedBox(height: 14),
 
@@ -356,7 +364,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
           ),
           const SizedBox(width: 6),
           Text(
-            controller.order.statusLabel,
+            controller.statusLabel(status),
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.w600,
@@ -379,6 +387,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
 
     final statusOrder = [
       'pending',
+      'placed',
       'accepted',
       'preparing',
       'ready',
@@ -394,11 +403,10 @@ class TrackOrderView extends GetView<TrackOrderController> {
         final step = entry.value;
         final stepIdx = statusOrder.indexOf(step.$2);
         final isDone = currentIdx >= stepIdx && currentIdx != -1;
-        // "On the Way" covers picked_up too
         final isCurrent = step.$2 == status ||
             (step.$2 == 'delivering' &&
-                ['picked_up', 'delivering'].contains(status)) ||
-            (step.$2 == 'accepted' && status == 'ready');
+                ['ready', 'picked_up', 'delivering'].contains(status)) ||
+            (step.$2 == 'pending' && status == 'placed');
 
         return Expanded(
           child: Row(
@@ -417,8 +425,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
                                 : AppColors.backgroundSecondary),
                         shape: BoxShape.circle,
                         border: isCurrent && !isDone
-                            ? Border.all(
-                                color: AppColors.primary, width: 2)
+                            ? Border.all(color: AppColors.primary, width: 2)
                             : null,
                       ),
                       child: Icon(
@@ -471,6 +478,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
         return AppColors.error;
       case 'delivering':
       case 'picked_up':
+      case 'ready':
         return AppColors.primary;
       default:
         return AppColors.warning;
