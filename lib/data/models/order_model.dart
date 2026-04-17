@@ -73,6 +73,14 @@ class OrderModel {
 
   bool get isCancellable =>
       status == 'pending' || status == 'accepted';
+
+  bool get isTrackable => [
+        'accepted',
+        'preparing',
+        'ready',
+        'picked_up',
+        'delivering',
+      ].contains(status);
 }
 
 class OrderItemModel {

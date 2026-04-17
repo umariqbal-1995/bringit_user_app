@@ -1,3 +1,5 @@
+> **TASK START RULE:** Before starting any new task, always run `git checkout dev && git pull origin dev` first, then create your branch off `dev`. Open a PR back to `dev` when done.
+
 ## BRANCHING STRATEGY — MANDATORY
 
 ### Branch Hierarchy

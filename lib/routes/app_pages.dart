@@ -18,8 +18,10 @@ import '../modules/checkout/bindings/checkout_binding.dart';
 import '../modules/checkout/views/checkout_view.dart';
 import '../modules/checkout/views/order_success_view.dart';
 import '../modules/orders/bindings/order_binding.dart';
+import '../modules/orders/bindings/track_order_binding.dart';
 import '../modules/orders/views/order_list_view.dart';
 import '../modules/orders/views/order_detail_view.dart';
+import '../modules/orders/views/track_order_view.dart';
 import '../modules/notifications/bindings/notification_binding.dart';
 import '../modules/notifications/views/notification_view.dart';
 import '../modules/favourites/bindings/favourites_binding.dart';
@@ -101,6 +103,11 @@ class AppPages {
       name: AppRoutes.orderDetail,
       page: () => const OrderDetailView(),
       binding: OrderBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.trackOrder,
+      page: () => const TrackOrderView(),
+      binding: TrackOrderBinding(),
     ),
     GetPage(
       name: AppRoutes.notifications,
