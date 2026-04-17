@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/order_model.dart';
 import '../../../widgets/store_card_widget.dart';
 import '../../../widgets/bottom_nav_widget.dart';
 import '../../../routes/app_routes.dart';
@@ -20,7 +21,9 @@ class HomeView extends GetView<HomeController> {
         child: Column(
           children: [
             Expanded(
-              child: RefreshIndicator(
+              child: Stack(
+                children: [
+                  RefreshIndicator(
                 onRefresh: controller.fetchData,
                 color: AppColors.primary,
                 child: CustomScrollView(
@@ -43,9 +46,26 @@ class HomeView extends GetView<HomeController> {
                       ),
                     ),
                     _buildStoreList(),
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
                   ],
                 ),
+              ),
+                  // Floating active order tiles — overlaid above scroll content
+                  Obx(() {
+                    final orders = controller.activeOrders;
+                    if (orders.isEmpty) return const SizedBox.shrink();
+                    return Positioned(
+                      bottom: 8,
+                      left: 16,
+                      right: 16,
+                      child: Column(
+                        children: orders
+                            .map((o) => _buildActiveOrderTile(o))
+                            .toList(),
+                      ),
+                    );
+                  }),
+                ],
               ),
             ),
             Obx(() => BottomNavWidget(
@@ -61,6 +81,144 @@ class HomeView extends GetView<HomeController> {
         ),
       ),
     );
+  }
+
+  Widget _buildActiveOrderTile(OrderModel order) {
+    final statusColor = _activeOrderStatusColor(order.status);
+    final statusLabel = _activeOrderStatusLabel(order.status);
+
+    return GestureDetector(
+      onTap: () => Get.toNamed(AppRoutes.trackOrder, arguments: order),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.12),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: AppColors.primary.withOpacity(0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Animated delivery icon
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.delivery_dining,
+                color: AppColors.primary,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    order.storeName.isEmpty ? 'Your Order' : order.storeName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: statusColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Row(
+              children: [
+                Text(
+                  'Track',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: AppColors.primary,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _activeOrderStatusColor(String status) {
+    switch (status) {
+      case 'delivering':
+      case 'picked_up':
+      case 'ready':
+        return AppColors.primary;
+      case 'accepted':
+      case 'preparing':
+        return const Color(0xFFF59E0B);
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  String _activeOrderStatusLabel(String status) {
+    switch (status) {
+      case 'pending':
+      case 'placed':
+        return 'Order placed';
+      case 'accepted':
+        return 'Accepted by store';
+      case 'preparing':
+        return 'Preparing your order';
+      case 'ready':
+        return 'Ready for pickup';
+      case 'picked_up':
+        return 'Rider picked up';
+      case 'delivering':
+        return 'Out for delivery';
+      default:
+        return status;
+    }
   }
 
   Widget _buildHeader() => Padding(

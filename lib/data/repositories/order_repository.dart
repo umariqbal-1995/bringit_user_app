@@ -37,4 +37,10 @@ class OrderRepository {
   Future<void> cancelOrder(String orderId, String reason) async {
     await _dio.post('/orders/$orderId/cancel', data: {'reason': reason});
   }
+
+  Future<Map<String, dynamic>> getOrderTracking(String orderId) async {
+    final res = await _dio.get('/orders/$orderId/tracking');
+    final data = res.data['data'] ?? res.data;
+    return data as Map<String, dynamic>;
+  }
 }

@@ -72,8 +72,15 @@ class CheckoutController extends GetxController {
       );
       lastOrderId.value = order.id;
       cartController.clear();
-      Get.offAllNamed(AppRoutes.orderSuccess,
-          arguments: {'orderId': order.id});
+      Get.snackbar(
+        '🎉 Order Placed!',
+        'Your order is confirmed. Track it live below.',
+        backgroundColor: const Color(0xFF22C55E),
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3),
+        snackPosition: SnackPosition.TOP,
+      );
+      Get.offAllNamed(AppRoutes.trackOrder, arguments: order);
     } catch (e) {
       debugPrint('[CheckoutController] placeOrder error: $e');
       String message = 'Failed to place order. Please try again.';

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../routes/app_routes.dart';
 import '../controllers/order_controller.dart';
 import '../../../data/models/order_model.dart';
 
@@ -239,9 +240,27 @@ class OrderDetailView extends GetView<OrderController> {
                   color: AppColors.textTertiary,
                 ),
               ),
+              // Track Order button
+              if (o.isTrackable) ...[
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: () => Get.toNamed(AppRoutes.trackOrder, arguments: o),
+                    icon: const Icon(Icons.delivery_dining_outlined, size: 20),
+                    label: const Text('Track Order'),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               // Cancel button
               if (o.isCancellable) ...[
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   height: 52,
