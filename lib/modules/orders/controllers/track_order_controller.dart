@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -19,6 +21,14 @@ class TrackOrderController extends GetxController {
   final isRiderNearby = false.obs;
   final isLoadingMap = true.obs;
 
+  // Custom marker icons (loaded once)
+  final userIcon = Rxn<BitmapDescriptor>();
+  final storeIcon = Rxn<BitmapDescriptor>();
+  final riderIcon = Rxn<BitmapDescriptor>();
+
+  // Route polylines
+  final polylines = <Polyline>{}.obs;
+
   final _mapCompleter = Completer<GoogleMapController>();
   Timer? _pollTimer;
 
@@ -33,9 +43,87 @@ class TrackOrderController extends GetxController {
   }
 
   Future<void> _init() async {
-    await _getUserLocation();
+    await Future.wait([
+      _getUserLocation(),
+      _loadMarkerIcons(),
+    ]);
     await _fetchTracking();
     _startPolling();
+  }
+
+  Future<void> _loadMarkerIcons() async {
+    userIcon.value = await _buildMarkerIcon(
+      color: const Color(0xFF22C55E),
+      icon: Icons.person,
+    );
+    storeIcon.value = await _buildMarkerIcon(
+      color: const Color(0xFFF97316),
+      icon: Icons.storefront,
+    );
+    riderIcon.value = await _buildMarkerIcon(
+      color: const Color(0xFF3B82F6),
+      icon: Icons.delivery_dining,
+    );
+  }
+
+  Future<BitmapDescriptor> _buildMarkerIcon({
+    required Color color,
+    required IconData icon,
+  }) async {
+    const double size = 100;
+    const double radius = size / 2 - 6;
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    // Drop shadow
+    canvas.drawCircle(
+      const Offset(size / 2, size / 2 + 4),
+      radius,
+      Paint()
+        ..color = Colors.black.withOpacity(0.22)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+    );
+
+    // Filled circle
+    canvas.drawCircle(
+      const Offset(size / 2, size / 2),
+      radius,
+      Paint()..color = color,
+    );
+
+    // White border ring
+    canvas.drawCircle(
+      const Offset(size / 2, size / 2),
+      radius,
+      Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4,
+    );
+
+    // Icon in center
+    final tp = TextPainter(textDirection: TextDirection.ltr)
+      ..text = TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontSize: 42,
+          fontFamily: icon.fontFamily,
+          package: icon.fontPackage,
+          color: Colors.white,
+        ),
+      )
+      ..layout();
+    tp.paint(
+      canvas,
+      Offset((size - tp.width) / 2, (size - tp.height) / 2),
+    );
+
+    final img = await recorder
+        .endRecording()
+        .toImage(size.toInt(), size.toInt());
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
   }
 
   Future<void> _getUserLocation() async {
@@ -82,6 +170,7 @@ class TrackOrderController extends GetxController {
         estimatedMinutes.value = (data['estimatedMinutes'] as num).toInt();
       }
       _checkRiderNearby();
+      _updatePolylines();
       _fitMap();
     } catch (_) {
       _useMockLocations();
@@ -97,7 +186,52 @@ class TrackOrderController extends GetxController {
     riderLocation.value = LatLng(baseLat + 0.009, baseLng - 0.006);
     estimatedMinutes.value = 12;
     _checkRiderNearby();
+    _updatePolylines();
     _fitMap();
+  }
+
+  void _updatePolylines() {
+    final s = storeLocation.value;
+    final r = riderLocation.value;
+    final u = userLocation.value;
+
+    const completedColor = Color(0xFFADB5BD); // gray — already traveled
+    const remainingColor = Color(0xFFF97316); // orange — remaining to user
+
+    final updated = <Polyline>{};
+
+    // Store → Rider: gray dashed (completed portion)
+    if (s != null && r != null) {
+      updated.add(Polyline(
+        polylineId: const PolylineId('store_to_rider'),
+        points: [s, r],
+        color: completedColor,
+        width: 4,
+        patterns: [PatternItem.dash(18), PatternItem.gap(10)],
+      ));
+    }
+
+    // Rider → User: orange dashed (remaining delivery path)
+    if (r != null && u != null) {
+      updated.add(Polyline(
+        polylineId: const PolylineId('rider_to_user'),
+        points: [r, u],
+        color: remainingColor,
+        width: 4,
+        patterns: [PatternItem.dash(18), PatternItem.gap(10)],
+      ));
+    } else if (s != null && u != null) {
+      // No rider yet — draw full store→user path
+      updated.add(Polyline(
+        polylineId: const PolylineId('store_to_user'),
+        points: [s, u],
+        color: remainingColor,
+        width: 4,
+        patterns: [PatternItem.dash(18), PatternItem.gap(10)],
+      ));
+    }
+
+    polylines.value = updated;
   }
 
   void _startPolling() {

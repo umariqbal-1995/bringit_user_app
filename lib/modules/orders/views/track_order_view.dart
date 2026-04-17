@@ -25,25 +25,31 @@ class TrackOrderView extends GetView<TrackOrderController> {
             Marker(
               markerId: const MarkerId('user'),
               position: user,
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueGreen),
+              icon: controller.userIcon.value ??
+                  BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueGreen),
               infoWindow: const InfoWindow(title: 'You'),
+              zIndex: 1,
             ),
           if (store != null)
             Marker(
               markerId: const MarkerId('store'),
               position: store,
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueOrange),
+              icon: controller.storeIcon.value ??
+                  BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueOrange),
               infoWindow: InfoWindow(title: controller.order.storeName),
+              zIndex: 2,
             ),
           if (rider != null)
             Marker(
               markerId: const MarkerId('rider'),
               position: rider,
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueAzure),
+              icon: controller.riderIcon.value ??
+                  BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueAzure),
               infoWindow: const InfoWindow(title: 'Rider'),
+              zIndex: 3,
             ),
         };
 
@@ -67,6 +73,7 @@ class TrackOrderView extends GetView<TrackOrderController> {
                         zoom: 14,
                       ),
                       markers: markers,
+                      polylines: controller.polylines.value,
                       onMapCreated: controller.onMapCreated,
                       myLocationEnabled: false,
                       zoomControlsEnabled: false,
